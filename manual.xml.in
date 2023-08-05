@@ -77,14 +77,17 @@
   &language.functions;
   &language.oop5;
   &language.namespaces;
+  &language.enumerations;
   &language.errors;
   &language.exceptions;
+  &language.fibers;
   &language.generators;
   &language.attributes;
   &language.references;
   &language.predefined.variables;
   &language.predefined.exceptions;
   &language.predefined.interfaces;
+  &language.predefined.attributes;
   &language.context;
   &language.wrappers;
  </book>
@@ -99,7 +102,6 @@
   &security.filesystem;
   &security.database;
   &security.errors;
-  &security.globals;
   &security.variables;
   &security.hiding;
   &security.current;
@@ -137,18 +139,15 @@
   <set xml:id="refs.basic.php">
    <title>&AffectingPHPsBehaviour;</title>
    &reference.apcu.book;
-   &reference.blenc.book;
    &reference.componere.book;
    &reference.errorfunc.book;
    &reference.ffi.book;
-   &reference.memtrack.book;
    &reference.opcache.book;
    &reference.outcontrol.book;
    &reference.info.book;
    &reference.phpdbg.book;
    &reference.runkit7.book;
    &reference.uopz.book;
-   &reference.weakref.book;
    &reference.wincache.book;
    &reference.xhprof.book;
    &reference.yac.book;
@@ -166,7 +165,6 @@
 
   <set xml:id="refs.utilspec.cmdline">
    <title>&CommandLineSpecificExtensions;</title>
-   &reference.ncurses.book;
    &reference.readline.book;
   </set>
 
@@ -182,12 +180,12 @@
 
   <set xml:id="refs.crypto">
    <title>&CryptographyExtensions;</title>
-   &reference.csprng.book;
    &reference.hash.book;
    &reference.mcrypt.book;
    &reference.mhash.book;
    &reference.openssl.book;
    &reference.password.book;
+   &reference.rnp.book;
    &reference.sodium.book;
   </set>
 
@@ -197,7 +195,6 @@
    <set xml:id="refs.database.abstract">
     <title>&AbstractionLayers;</title>
     &reference.dba.book;
-    &reference.dbx.book;
     &reference.uodbc.book;
     &reference.pdo.book;
    </set>
@@ -205,22 +202,15 @@
    <set xml:id="refs.database.vendors">
     <title>&VendorSpecificDatabaseExtensions;</title>
     &reference.cubrid.book;
-    &reference.dbplus.book;
     &reference.dbase.book;
-    &reference.filepro.book;
     &reference.ibase.book;
-    &reference.fbsql.book;
     &reference.ibm-db2.book;
-    &reference.ingres-ii.book;
-    &reference.mongo.book;
     &reference.mongodb.set;
     &reference.mysqlinfo.set;
     &reference.oci8.book;
-    &reference.paradox.book;
     &reference.pgsql.book;
     &reference.sqlite3.book;
     &reference.sqlsrv.book;
-    &reference.tokyo-tyrant.book;
    </set>
   </set>
 
@@ -238,8 +228,6 @@
    &reference.fileinfo.book;
    &reference.filesystem.book;
    &reference.inotify.book;
-   &reference.mime-magic.book;
-   &reference.proctitle.book;
    &reference.xattr.book;
    &reference.xdiff.book;
   </set>
@@ -300,7 +288,6 @@
    &reference.exec.book;
    &reference.parallel.book;
    &reference.pthreads.book;
-   &reference.pht.book;
    &reference.sem.book;
    &reference.shmop.book;
    &reference.sync.book;
@@ -310,13 +297,15 @@
    <title>&OtherBasicExtensions;</title>
    &reference.geoip.book;
    &reference.fann.book;
+   &reference.igbinary.book;
    &reference.json.book;
+   &reference.simdjson.book;
    &reference.lua.book;
    &reference.luasandbox.book;
    &reference.misc.book;
+   &reference.random.book;
    &reference.seaslog.book;
    &reference.spl.book;
-   &reference.spl-types.book;
    &reference.stream.book;
    &reference.swoole.book;
    &reference.tidy.book;
@@ -328,6 +317,7 @@
    &reference.yaconf.book;
    &reference.taint.book;
    &reference.ds.book;
+   &reference.var-representation.book;
   </set>
 
   <set xml:id="refs.remote.other">
@@ -359,7 +349,6 @@
   <set xml:id="refs.search">
    <title>&SearchEngineExtensions;</title>
    &reference.solr.book;
-   &reference.sphinx.book;
   </set>
 
   <set xml:id="refs.utilspec.server">
@@ -378,7 +367,6 @@
    &reference.cmark.book;
    &reference.parle.book;
    &reference.pcre.book;
-   &reference.regex.book;
    &reference.ssdeep.book;
    &reference.strings.book;
   </set>
@@ -387,7 +375,6 @@
    <title>&VariableandTypeRelatedExtensions;</title>
    &reference.array.book;
    &reference.classobj.book;
-   &reference.classkit.book;
    &reference.ctype.book;
    &reference.filter.book;
    &reference.funchand.book;
@@ -448,6 +435,8 @@
  <book xml:id="appendices">
   <title>&Appendices;</title>
   &appendices.history;
+  &appendices.migration82;
+  &appendices.migration81;
   &appendices.migration80;
   &appendices.migration74;
   &appendices.migration73;

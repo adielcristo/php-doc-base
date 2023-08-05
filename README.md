@@ -36,16 +36,16 @@ https://wiki.php.net/doc/phd
 ### Source checkout
 
 For a more general git-workflow see [the Wiki](https://wiki.php.net/vcs/gitworkflow#reviewing_and_closing_pull_requests).
-Make sure to upload your SSH public key to your account at master.php.net
+Make sure to upload your SSH public key to your account at main.php.net
 
 Check out the sources:
 
 ```bash
 mkdir phpdoc
 cd phpdoc
-git clone git@git.php.net:/doc/en.git
-git clone git@git.php.net:/doc/your-language-of-choice.git
-git clone git@git.php.net:/doc/base.git doc-base
+git clone git@github.com:php/doc-en.git en
+git clone git@github.com:php/doc-your-language-of-choice.git your-language-of-choice
+git clone git@github.com:php/doc-base.git
 ```
 
 Change `your-language-of-choice` if you would like to check out a different language.
@@ -134,3 +134,12 @@ and concerns.
 Be sure to check out [global.ent](entities/global.ent) and
 language-snippets.ent (located within each language's repo) for
 more information for entities and URLs.
+
+# Quality Assurance Tools (QA Tools)
+
+There are various scripts available to ensure the quality of the documentation
+and find issues with it, they are located in the `scripts/qa/` directory.
+
+There might be some more just in `scripts/` but they need to be checked if they
+are still relevant and/or given some love.
+

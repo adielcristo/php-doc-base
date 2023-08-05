@@ -1,5 +1,5 @@
 <?php
-/*  
+/*
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
@@ -16,7 +16,7 @@
   | Authors:    Felipe Pena <felipe@php.net>                             |
   |             Philip Olson <philip@php.net>                            |
   +----------------------------------------------------------------------+
- 
+
   $Id$
 */
 
@@ -56,7 +56,7 @@ $DOC_EXT = array(
 function usage() { /* {{{ */
 	$v = PHP_VERSION;
 	print <<<USAGE
-Usage: 
+Usage:
 	php docgen.php <options>
 
 Example options:
@@ -73,7 +73,7 @@ Options:
 	-e,--extension	-- extension name
 	-f,--function	-- function name
 	-h,--help	-- show this help
-	-i,--include	-- includes a PHP file 
+	-i,--include	-- includes a PHP file
 	(shortcut for: php -dauto_prepend_file=streams.php docgen.php)
 
 	-m,--method	-- method name (require -c)
@@ -96,15 +96,15 @@ USAGE;
 function find_function($ext, ReflectionMethod $method = NULL, ReflectionFunction $func = NULL) { /* {{{ */
 	$ext_name = strtolower($ext);
 	$ext = new ReflectionExtension($ext);
-	
-	if ($method) {	
+
+	if ($method) {
 		preg_match_all('/[A-Z][a-z]+|[a-z]+/', $method->name, $parts);
-	
+
 		$possibleNames = array(
 			$ext_name .'_'. strtolower(implode('_', $parts[0])),
 			$ext_name .'_'. strtolower(implode('_', array_reverse($parts[0])))
 		);
-		
+
 		foreach ($ext->getFunctions() as $function) {
 			if (in_array($function->name, $possibleNames)) {
 				return $function;
@@ -118,14 +118,14 @@ function find_function($ext, ReflectionMethod $method = NULL, ReflectionFunction
 			strtolower(implode($parts[0])),
 			strtolower(implode(array_reverse($parts[0])))
 		);
-		
+
 		foreach ($ext->getClasses() as $class) {
 			foreach ($class->getMethods() as $method) {
 				if (in_array(strtolower($method->name), $possibleNames)) {
 					return $method;
-				}		
+				}
 			}
-		}		
+		}
 	}
 	return false;
 }
@@ -138,17 +138,15 @@ function add_warning($err_msg) { /* {{{ */
 }
 /* }}} */
 
-function create_markup_to_modifiers(ReflectionMethod $method) { /* {{{ */
-	$modifiers = Reflection::getModifierNames($method->getModifiers());
-	$markup = '';
+function create_markup_to_modifiers(int $modifierFlags): array { /* {{{ */
+	$modifiers = Reflection::getModifierNames($modifierFlags);
+	$result = [];
 
-	if ($modifiers) {
-		foreach ($modifiers as $modifier) {
-			$markup .= '<modifier>'. $modifier .'</modifier> ';
-		}
-	}
+    foreach ($modifiers as $modifier) {
+        $result[] = '<modifier>'. $modifier .'</modifier>';
+    }
 
-	return $markup;
+	return $result;
 }
 /* }}} */
 
@@ -187,14 +185,40 @@ function save_file($filename, $content) { /* {{{ */
 }
 /* }}} */
 
+/** Returns an xml type tag or an entity to use in the generated xml for a PHP constant */
+function get_xml_type_tag_or_entity($value, bool $allow_entity) { /* {{{ */
+	// Entities from entities/global.ent are recommended for freeform text.
+	if (is_int($value)) {
+		return $allow_entity ? '&integer;' : '<type>int</type>';
+	} elseif (is_float($value)) {
+		return $allow_entity ? '&float;' : '<type>float</type>';
+	} elseif (is_null($value)) {
+		return '<type>null</type>';
+	} elseif (is_bool($value)) {
+		return $allow_entity ? '&boolean;' : '<type>bool</type>';
+	}
+	if ($allow_entity) {
+		if (is_array($value)) {
+			return '&array;';
+		} elseif (is_object($value)) {
+			return '&object;';
+		} elseif (is_resource($value)) {
+			return '&resource;';
+		}
+	}
+	// Use <type>$type</type> for other types
+	return '<type>' . gettype($value) . '</type>';
+}
+/* }}} */
+
 function get_type_by_string($str) { /* {{{ */
 	if (is_numeric($str)) {
 		if ($str && intval($str) == $str) {
-			return 'integer';
+			return 'int';
 		} else if ($str && floatval($str) == $str) {
 			return 'float';
 		} else {
-			return 'integer';
+			return 'int';
 		}
 	} else {
 		return 'string';
@@ -283,7 +307,7 @@ function global_check($content) { /* {{{ */
 
 	/* {EXT_NAME} */
 	$content = preg_replace('/\{EXT_NAME\}/', ucwords($INFO['actual_extension']), $content);
-	
+
 	/* {EMPTY_REVISION_KEYWORD} */
 	$content = str_replace('{EMPTY_REVISION_KEYWORD}', '<!-- '. chr(36) .'Revision$ -->', $content);
 
@@ -369,7 +393,7 @@ function gen_method_markup(ReflectionMethod $method, $content) { /* {{{ */
 	$content = preg_replace('/\{METHOD_NAME\}/', $method->name, $content);
 
 	/* {MODIFIERS} */
-	$content = preg_replace('/\{MODIFIERS\}/', create_markup_to_modifiers($method), $content, 1);
+	$content = preg_replace('/\{MODIFIERS\}/', implode(" ", create_markup_to_modifiers($method->getModifiers())), $content, 1);
 
 	/* {RETURN_TYPE} */
 	if (!$method->isConstructor()) {
@@ -392,7 +416,7 @@ function gen_mapping_markup(ReflectionMethod $method, ReflectionFunction $functi
 		/* {PARAMETERS_DESCRIPTION} */
 		if ($ident = get_ident_size('PARAMETERS_DESCRIPTION', $content)) {
 			$count = 1;
-			
+
 			$func_params = array();
 			$method_params = array();
 			foreach ($function->getParameters() as $param) {
@@ -404,7 +428,7 @@ function gen_mapping_markup(ReflectionMethod $method, ReflectionFunction $functi
 
 			$markup  = "<para>". PHP_EOL;
 			$markup .= str_repeat(' ', $ident + 1) ."<variablelist>". PHP_EOL;
-			foreach ($func_params as $param) {				
+			foreach ($func_params as $param) {
 				$markup .= str_repeat(' ', $ident + 2) ."<varlistentry>". PHP_EOL;
 				$markup .= str_repeat(' ', $ident + 3) .'<term><parameter>'. ($param ? $param : 'param'. $count) ."</parameter></term>". PHP_EOL;
 				$markup .= str_repeat(' ', $ident + 3) ."<listitem>". PHP_EOL;
@@ -416,7 +440,7 @@ function gen_mapping_markup(ReflectionMethod $method, ReflectionFunction $functi
     			$count++;
 			}
 			$diff_params = array_diff($method_params, $func_params);
-			
+
 			foreach ($method_params as $param) {
 				if (!($param && in_array($param, $diff_params))) {
 					continue;
@@ -430,7 +454,7 @@ function gen_mapping_markup(ReflectionMethod $method, ReflectionFunction $functi
 				$markup .= str_repeat(' ', $ident + 3) ."</listitem>". PHP_EOL;
 				$markup .= str_repeat(' ', $ident + 2) ."</varlistentry>". PHP_EOL;
 				$count++;
-			}			
+			}
 			$markup .= str_repeat(' ', $ident + 1) ."</variablelist>". PHP_EOL;
 			$markup .= str_repeat(' ', $ident) ."</para>";
 
@@ -440,16 +464,17 @@ function gen_mapping_markup(ReflectionMethod $method, ReflectionFunction $functi
 		$content = preg_replace('/\{PARAMETERS\}/', '<void />', $content, 1);
 		$content = preg_replace('/\{PARAMETERS_DESCRIPTION\}/', '&no.function.parameters;', $content, 1);
 	}
-	
+
 	$content = gen_method_markup($method, $content);
 	$content = gen_function_markup($function, $content);
-	
-	return $content;	
+
+	return $content;
 }
 /* }}} */
 
 function gen_class_markup(ReflectionClass $class, $content) { /* {{{ */
 	$id = format_id($class->getName());
+	$escapedName = addslashes($class->getName());
 
 	/* {CLASS_NAME} */
 	$content = preg_replace('/\{CLASS_NAME\}/', $class->getName(), $content);
@@ -479,7 +504,7 @@ function gen_class_markup(ReflectionClass $class, $content) { /* {{{ */
 	/* {IMPLEMENTS} */
 	if ($interfaces = $class->getInterfaces()) {
 		$ident = get_ident_size('IMPLEMENTS', $content);
-		
+
 		// Don't get inherited interfaces, e.g. Traversable if we already have Iterator.
 		foreach ($interfaces as $interface) {
 			foreach (array_keys($interface->getInterfaces()) as $inherited_interface) {
@@ -507,7 +532,7 @@ function gen_class_markup(ReflectionClass $class, $content) { /* {{{ */
 		foreach ($constants as $constant => $value) {
 			$markup .= str_repeat(' ', $ident) ."<fieldsynopsis>". PHP_EOL;
 			$markup .= str_repeat(' ', $ident + 1) ."<modifier>const</modifier>". PHP_EOL;
-			$markup .= str_repeat(' ', $ident + 1) .'<type>'. gettype($value) ."</type>". PHP_EOL;
+			$markup .= str_repeat(' ', $ident + 1) .get_xml_type_tag_or_entity($value, false). PHP_EOL; // For the class synopsis we use explicit <type> elements
       		$markup .= str_repeat(' ', $ident + 1) .'<varname linkend="'. $id .'.constants.'. format_id($constant) .'">'. $class->getName() .'::'. $constant ."</varname>". PHP_EOL;
       		$markup .= str_repeat(' ', $ident + 1) .'<initializer>'. $value ."</initializer>". PHP_EOL;
      		$markup .= str_repeat(' ', $ident) ."</fieldsynopsis>". PHP_EOL;
@@ -547,7 +572,7 @@ function gen_class_markup(ReflectionClass $class, $content) { /* {{{ */
 
 
 	/* {PROPERTIES_LIST} */
-	if ($properties = $class->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED)) {
+	if ($properties = $class->getProperties()) {
 		$ident = get_ident_size('PROPERTIES_LIST', $content);
 		$inherited = array();
 
@@ -561,29 +586,33 @@ function gen_class_markup(ReflectionClass $class, $content) { /* {{{ */
 				continue;
 			}
 
-			/* Get the modifier */
-			preg_match('/(\w+) \$/', (string) $property, $match);
-
 			$markup .= str_repeat(' ', $ident) ."<fieldsynopsis>". PHP_EOL;
-			$markup .= str_repeat(' ', $ident + 1) .'<modifier>'. $match[1] ."</modifier>". PHP_EOL;
-			$markup .= str_repeat(' ', $ident + 1) .'<varname linkend="'. $id .'.props.'. format_id($property->getName()) .'">'. $property->getName() ."</varname>". PHP_EOL;
-			$markup .= str_repeat(' ', $ident) ."</fieldsynopsis>". PHP_EOL;
+			$markup .= str_repeat(' ', $ident + 1) .
+                implode(
+                    str_repeat(' ', $ident + 1) . PHP_EOL,
+                    create_markup_to_modifiers($property->getModifiers())
+                ) . PHP_EOL;
+            if (PHP_VERSION_ID >= 74000 && $property->hasType()) {
+                $markup .= str_repeat(' ', $ident + 1) . get_type_as_xml_string($property->getType()). PHP_EOL;
+            }
+			$markup .= str_repeat(' ', $ident + 1) . '<varname linkend="'. $id .'.props.'. format_id($property->getName()) .'">'. $property->getName() ."</varname>". PHP_EOL;
+			$markup .= str_repeat(' ', $ident) . "</fieldsynopsis>". PHP_EOL;
 		}
 
 		if ($markup) {
-			$markup = "<classsynopsisinfo role=\"comment\">&Properties;</classsynopsisinfo>". PHP_EOL . $markup;
+			$markup = PHP_EOL . str_repeat(' ', $ident) . "<classsynopsisinfo role=\"comment\">&Properties;</classsynopsisinfo>". PHP_EOL . $markup;
 		}
-		
+
 		if ($inherited) {
 			if ($markup) {
 				$markup .= PHP_EOL . str_repeat(' ', $ident);
 			}
 			$markup .= '<classsynopsisinfo role="comment">&InheritedProperties;</classsynopsisinfo>'. PHP_EOL;
 			foreach ($inherited as $declaring_class) {
-				$markup .= str_repeat(' ', $ident) ."<xi:include xpointer=\"xmlns(db=http://docbook.org/ns/docbook) xpointer(id('" . strtolower($declaring_class) . ".synopsis')/descendant::db:fieldsynopsis)\"><xi:fallback/></xi:include>". PHP_EOL;
+				$markup .= str_repeat(' ', $ident) ."<xi:include xpointer=\"xmlns(db=http://docbook.org/ns/docbook) xpointer(id('" . strtolower($declaring_class) . ".synopsis')/descendant::db:fieldsynopsis)\">" . PHP_EOL . str_repeat(' ', $ident + 1) . "<xi:fallback/>" . PHP_EOL . str_repeat(' ', $ident) . "</xi:include>". PHP_EOL;
 			}
 		}
-		
+
 		$content = preg_replace('/\{PROPERTIES_LIST\}/', $markup, $content, 1);
 	} else {
 		$content = preg_replace('/^\s*\{PROPERTIES_LIST\}.*?\n/m', '', $content, 1);
@@ -625,7 +654,7 @@ function gen_class_markup(ReflectionClass $class, $content) { /* {{{ */
 	$ident = get_ident_size('METHOD_XINCLUDE', $content);
 	$content = preg_replace('/\{METHOD_XINCLUDE\}/',
 		PHP_EOL . str_repeat(' ', $ident) . "<classsynopsisinfo role=\"comment\">&Methods;</classsynopsisinfo>". PHP_EOL.
-		str_repeat(' ', $ident) ."<xi:include xpointer=\"xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.". $id ."')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[not(@role='procedural')])\"><xi:fallback/></xi:include>",
+		str_repeat(' ', $ident) ."<xi:include xpointer=\"xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.". $id ."')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[@role='" . $escapedName . "'])\">" . PHP_EOL . str_repeat(' ', $ident + 1) . "<xi:fallback/>" . PHP_EOL . str_repeat(' ', $ident) . "</xi:include>",
 		$content, 1);
 
 	/* {INHERITED_XINCLUDE} */
@@ -633,7 +662,7 @@ function gen_class_markup(ReflectionClass $class, $content) { /* {{{ */
 		$ident = get_ident_size('INHERITED_XINCLUDE', $content);
 		$content = preg_replace('/\{INHERITED_XINCLUDE\}/',
 			PHP_EOL . str_repeat(' ', $ident) ."<classsynopsisinfo role=\"comment\">&InheritedMethods;</classsynopsisinfo>". PHP_EOL.
-			str_repeat(' ', $ident) ."<xi:include xpointer=\"xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.". format_id($parent->getName()) ."')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[not(@role='procedural')])\"><xi:fallback/></xi:include>". PHP_EOL,
+			str_repeat(' ', $ident) ."<xi:include xpointer=\"xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.". format_id($parent->getName()) ."')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[@role='" . $escapedName . "'])\">" . PHP_EOL . str_repeat(' ', $ident + 1) . "<xi:fallback/>" . PHP_EOL . str_repeat(' ', $ident) . "</xi:include>". PHP_EOL,
 			$content, 1);
 	} else {
 		$content = preg_replace('/^\s*\{INHERITED_XINCLUDE\}.*?\n/m', '', $content, 1);
@@ -649,14 +678,14 @@ function gen_extension_markup(ReflectionExtension $obj, $content, $xml_file) { /
 	switch ($xml_file) {
 		case 'ini.xml':
 			if ($ini = ini_get_all($obj->name)) {
-				
+
 				$visibility = array(
 				  INI_USER   => 'PHP_INI_USER',
 				  INI_PERDIR => 'PHP_INI_PERDIR',
 				  INI_SYSTEM => 'PHP_INI_SYSTEM',
 				  INI_ALL    => 'PHP_INI_ALL',
 				);
-				
+
 				$ident = get_ident_size('INI_ENTRIES', $content);
 
 				$markup = "<tbody>". PHP_EOL;
@@ -707,7 +736,7 @@ function gen_extension_markup(ReflectionExtension $obj, $content, $xml_file) { /
 					$markup .= str_repeat(' ', $ident + 2) .'<varlistentry xml:id="constant.'. format_id($name) .'">'. PHP_EOL;
 					$markup .= str_repeat(' ', $ident + 3) ."<term>". PHP_EOL;
 					$markup .= str_repeat(' ', $ident + 4) ."<constant>". $name ."</constant>". PHP_EOL;
-					$markup .= str_repeat(' ', $ident + 4) ."(<type>". gettype($value) ."</type>)". PHP_EOL;
+					$markup .= str_repeat(' ', $ident + 4) ."(". get_xml_type_tag_or_entity($value, true) .")". PHP_EOL;
 					$markup .= str_repeat(' ', $ident + 3) ."</term>". PHP_EOL;
 					$markup .= str_repeat(' ', $ident + 3) ."<listitem>". PHP_EOL;
 					$markup .= str_repeat(' ', $ident + 4) ."<simpara>". PHP_EOL;
@@ -724,12 +753,12 @@ function gen_extension_markup(ReflectionExtension $obj, $content, $xml_file) { /
 				$content = preg_replace('/\{CONSTANTS\}/', '&no.constants;', $content, 1);
 			}
 		break;
-		
+
 		case 'configure.xml':
 
 			$ident  = get_ident_size('EXT_INSTALL_MAIN', $content);
 			$ident2 = get_ident_size('EXT_INSTALL_WIN',  $content);
-		
+
 			$markup  = '';
 			$markup2 = '';
 			if ($OPTION['pecl'] === true) {
@@ -768,7 +797,7 @@ function gen_extension_markup(ReflectionExtension $obj, $content, $xml_file) { /
 				$version_default = 'PECL {EXT_NAME_ID} &gt;= Unknown';
 			}
 
-			$markup = "";		
+			$markup = "";
 			/* Function list */
 			if ($functions = $obj->getFunctions()) {
 				$markup .= "<!-- Functions -->". PHP_EOL;
@@ -789,7 +818,7 @@ function gen_extension_markup(ReflectionExtension $obj, $content, $xml_file) { /
 			}
 			$content = preg_replace('/\{VERSIONS\}/', rtrim($markup), $content);
 		break;
-		
+
 		case 'book.developer.xml':
 			if ($OPTION['docbase'] && $OPTION['phpdoc']) {
 				$content = preg_replace('/\{PATH_TO_DOCBASE\}/', $OPTION['docbase'], $content);
@@ -828,13 +857,13 @@ function write_doc(Reflector $obj, $type) { /* {{{ */
 
 			$INFO['actual_file'] = $filename;
 			$INFO['mappeds'][] = $filename;
-		
+
 			/* Mappeds */
 			if ($function = find_function($INFO['actual_extension'], $obj, NULL)) {
 				$content = file_get_contents(dirname(__FILE__) .'/mapping.tpl');
 				$content = gen_mapping_markup($obj, $function, $content);
 				$content = str_replace('{DEFAULT_EXAMPLE}', get_default_role('example_mapping', "{$obj->class}::{$obj->name}", $OPTION['example']), $content);
-			} else {				
+			} else {
 				$content = file_get_contents(dirname(__FILE__) .'/'. $TEMPLATE[$type]);
 				$content = gen_method_markup($obj, $content);
 				$content = str_replace('{DEFAULT_EXAMPLE}', get_default_role('example', "{$obj->class}::{$obj->name}", $OPTION['example']), $content);
@@ -866,24 +895,24 @@ function write_doc(Reflector $obj, $type) { /* {{{ */
 			if ($method = find_function($INFO['actual_extension'], NULL, $obj)) {
 				$path = $OPTION['output'] .'/'. strtolower($method->class);
 				$filename = $path .'/'. format_filename($method->name) .'.xml';
-				
+
 				if (in_array($filename, $INFO['mappeds'])) {
 					return;
 				}
-				
-				create_dir($path);				
-				$INFO['actual_file'] = $filename;				
-				
+
+				create_dir($path);
+				$INFO['actual_file'] = $filename;
+
 				$content = file_get_contents(dirname(__FILE__) .'/mapping.tpl');
 				$content = gen_mapping_markup($method, $obj, $content);
 				$content = str_replace('{DEFAULT_EXAMPLE}', get_default_role('example_mapping', $obj->getName(), $OPTION['example']), $content);
 			} else {
 				$path = $OPTION['output'] .'/functions';
 				$filename = $path .'/'. format_filename($obj->getName()) .'.xml';
-				
+
 				create_dir($path);
 				$INFO['actual_file'] = $filename;
-			
+
 				$content = file_get_contents(dirname(__FILE__) .'/'. $TEMPLATE[$type]);
 				$content = gen_function_markup($obj, $content);
 				$content = str_replace('{DEFAULT_EXAMPLE}', get_default_role('example', $obj->getName(), $OPTION['example']), $content);
@@ -982,15 +1011,15 @@ function gen_docs($name, $type) {	/* {{{ */
 /* }}} */
 
 function get_default_role ($role, $funcname, $default) {
-	
+
 	$out = '';
-	
+
 	if (!$default) {
 		return $out;
 	}
-	
+
 	if ($role === 'seealso') {
-		
+
 		$out = <<<ROLE
  <refsect1 role="seealso">
   &reftitle.seealso;
@@ -1000,9 +1029,9 @@ function get_default_role ($role, $funcname, $default) {
  </refsect1>
 ROLE;
 	}
-	
+
 	if ($role === 'example') {
-		
+
 		$out = <<<ROLE
  <refsect1 role="examples">
   &reftitle.examples;
@@ -1027,9 +1056,9 @@ ROLE;
  </refsect1>
 ROLE;
 	}
-	
+
 	if ($role === 'example_mapping') {
-		
+
 		$out = <<<ROLE
  <refsect1 role="examples">
   &reftitle.examples;
@@ -1068,7 +1097,7 @@ ROLE;
  </refsect1>
 ROLE;
 	}
-	
+
 	return PHP_EOL . $out . PHP_EOL;
 }
 
@@ -1179,7 +1208,7 @@ foreach ($options as $opt => $value) {
 			$OPTION['quiet'] = true;
 			break;
 		case 's':
-		case 'seealso':		
+		case 'seealso':
 			$OPTION['seealso'] = true;
 			break;
 		case 'x':
@@ -1243,7 +1272,7 @@ if (empty($OPTION['method']) && !empty($OPTION['class'])) {
 // Example: --output out --class domdocument --copy --phpdoc ../../../en/reference/dom/
 // That will copy over new domdocument files, while not overwriting any
 if (!empty($OPTION['copy']) && !empty($OPTION['phpdoc'])) {
-	
+
 	if (!is_dir($OPTION['phpdoc'])) {
 		echo "ERROR: The provided phpdoc path is not a directory: $OPTION[phpdoc]\n";
 		exit;
@@ -1252,7 +1281,7 @@ if (!empty($OPTION['copy']) && !empty($OPTION['phpdoc'])) {
 	if (!empty($OPTION['test'])) {
 		echo "INFO: Test mode, so will not copy over files.\n";
 	}
-	
+
 	$count_gen  = 0;
 	$count_copy = 0;
 	foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($OPTION['output'])) as $file) {
@@ -1264,16 +1293,16 @@ if (!empty($OPTION['copy']) && !empty($OPTION['phpdoc'])) {
 		if (!$file->isFile() || pathinfo($filename, PATHINFO_EXTENSION) !== 'xml') {
 			continue;
 		}
-	
+
 		// fileid is equal in docgen output and phpdoc
 		$fileid = str_replace($OPTION['output'], '', $filepathname);
-	
+
 		// Do not overwrite
 		if (file_exists($OPTION['phpdoc'] . $fileid)) {
 			echo "INFO: will not overwrite: $OPTION[phpdoc]$fileid\n";
 			continue;
 		}
-		
+
 		if (empty($OPTION['test'])) {
 			// Hack to create the directory
 			$dir = str_replace($filename, '', $OPTION['phpdoc'] . $fileid);
@@ -1288,7 +1317,7 @@ if (!empty($OPTION['copy']) && !empty($OPTION['phpdoc'])) {
 		}
 		$count_copy++;
 	}
-	
+
 	echo "INFO: Copied over $count_copy files, after generating $count_gen files.\n";
 	if ($count_copy > 0) {
 		echo "INFO: Be sure to add version information to $OPTION[phpdoc]/version.xml, because I am unsure how to do that (yet).\n";

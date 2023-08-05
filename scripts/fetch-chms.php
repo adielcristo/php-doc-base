@@ -1,6 +1,6 @@
 <?php
 define("DEBUG", 0);
-$BUILDDIR = "http://phpmanualchm.s3-website-ap-northeast-1.amazonaws.com";
+$BUILDDIR = "https://www.mumumu.org/chm";
 $TMPDIR = sys_get_temp_dir();
 $CHMDIR = "/local/mirrors/phpweb/distributions/manual";
 
